@@ -35,13 +35,18 @@ async function connectToDatabase() {
 }
 
 // Routes
+app.get('/', async (req, res) => {
+  await connectToDatabase();
+  res.json({ message: 'Welcome to Vercel MERN API!' });
+});
+
 app.get('/api', async (req, res) => {
   await connectToDatabase();
   res.json({ message: 'Welcome to Vercel MERN API!' });
 });
 
-// Example CRUD endpoints
-app.get('/api/examples', async (req, res) => {
+// Rest of the routes should remove the /api prefix since Vercel handles it
+app.get('/examples', async (req, res) => {
   try {
     await connectToDatabase();
     const examples = await Example.find();
@@ -51,7 +56,7 @@ app.get('/api/examples', async (req, res) => {
   }
 });
 
-app.post('/api/examples', async (req, res) => {
+app.post('/examples', async (req, res) => {
   try {
     await connectToDatabase();
     const example = new Example({
@@ -65,7 +70,7 @@ app.post('/api/examples', async (req, res) => {
   }
 });
 
-app.get('/api/health', async (req, res) => {
+app.get('/health', async (req, res) => {
   try {
     await connectToDatabase();
     const status = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
