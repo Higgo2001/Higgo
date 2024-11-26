@@ -13,37 +13,64 @@ const connectToMongo = async () => {
   if (isConnected) return;
 
   try {
-    await mongoose.connect('mongodb+srv://higgosmit7:eEya82K8VnoXIx1r@sarecipe.nkqtv.mongodb.net/your_database_name?retryWrites=true&w=majority', {
+    await mongoose.connect('mongodb+srv://higgosmit7:eEya82K8VnoXIx1r@sarecipe.nkqtv.mongodb.net/sarecipe', {
       useNewUrlParser: true,
       useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+      socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
     });
+    
+    // Test the connection
+    await mongoose.connection.db.admin().ping();
+    
     isConnected = true;
     lastError = null;
-    console.log('MongoDB Connected');
+    console.log('MongoDB Connected Successfully');
   } catch (error) {
     isConnected = false;
     lastError = error.message;
     console.error('MongoDB connection error:', error);
+    
+    // More detailed error logging
+    if (error.name === 'MongoTimeoutError') {
+      console.error('Connection timeout - Check network or MongoDB Atlas status');
+    }
+    if (error.name === 'MongoNetworkError') {
+      console.error('Network error - Check your connection or MongoDB URI');
+    }
   }
 };
 
 // Debug route to check MongoDB status
 app.get('/debug', async (req, res) => {
-  await connectToMongo();
-  res.json({
-    mongodb: {
-      isConnected: isConnected,
-      connectionState: mongoose.connection.readyState,
-      lastError: lastError,
-      connectionString: process.env.MONGODB_URI ? 
-        process.env.MONGODB_URI.replace(/:([^:@]{8})[^:@]*@/, ':****@') : 
-        'Not configured'
-    },
-    environment: {
-      nodeEnv: process.env.NODE_ENV,
-      timestamp: new Date().toISOString()
-    }
-  });
+  try {
+    await connectToMongo();
+    res.json({
+      mongodb: {
+        isConnected: isConnected,
+        connectionState: mongoose.connection.readyState,
+        lastError: lastError,
+        databaseName: mongoose.connection.name,
+        host: mongoose.connection.host,
+        port: mongoose.connection.port,
+        readyState: {
+          0: 'disconnected',
+          1: 'connected',
+          2: 'connecting',
+          3: 'disconnecting',
+        }[mongoose.connection.readyState],
+      },
+      environment: {
+        nodeEnv: process.env.NODE_ENV,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Failed to get debug info',
+      details: error.message
+    });
+  }
 });
 
 // Root route
@@ -76,24 +103,35 @@ app.get('/api', (req, res) => {
   });
 });
 
-// Example MongoDB test route
+// Example MongoDB test route with better error handling
 app.get('/api/mongodb-test', async (req, res) => {
   try {
+    console.log('Attempting MongoDB connection...');
     await connectToMongo();
+    
     if (!isConnected) {
-      throw new Error('MongoDB is not connected');
+      throw new Error('Failed to establish MongoDB connection');
     }
+
+    // Try to perform a simple operation
+    const dbPing = await mongoose.connection.db.admin().ping();
+    
     res.json({ 
       success: true,
       message: 'MongoDB is connected and working!',
-      connectionState: mongoose.connection.readyState
+      connectionState: mongoose.connection.readyState,
+      ping: dbPing,
+      database: mongoose.connection.name
     });
   } catch (error) {
+    console.error('MongoDB test failed:', error);
     res.status(500).json({ 
       success: false,
       message: 'MongoDB connection failed',
       error: error.message,
-      connectionState: mongoose.connection.readyState
+      connectionState: mongoose.connection.readyState || 0,
+      errorType: error.name,
+      errorStack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
