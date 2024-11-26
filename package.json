@@ -1,0 +1,22 @@
+{
+  "name": "vercel-mern-api",
+  "version": "1.0.0",
+  "description": "MERN API for Vercel",
+  "main": "api/index.js",
+  "scripts": {
+    "start": "node api/index.js",
+    "dev": "nodemon api/index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.21.1",
+    "mongoose": "^7.8.3"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
