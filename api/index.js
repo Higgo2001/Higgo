@@ -13,7 +13,7 @@ const connectToMongo = async () => {
   if (isConnected) return;
 
   try {
-    await mongoose.connect(process.env.MONGODB_URI, {
+    await mongoose.connect('mongodb+srv://higgosmit7:eEya82K8VnoXIx1r@sarecipe.nkqtv.mongodb.net/your_database_name?retryWrites=true&w=majority', {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
@@ -50,6 +50,12 @@ app.get('/debug', async (req, res) => {
 app.get('/', (req, res) => {
   res.json({ 
     message: 'Welcome to the root path',
+    availableEndpoints: {
+      debug: '/debug',
+      mongoTest: '/api/mongodb-test',
+      api: '/api',
+      test: '/api/test'
+    },
     debug: 'Visit /debug to see MongoDB connection status'
   });
 });
