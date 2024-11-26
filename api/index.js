@@ -13,7 +13,7 @@ const connectToMongo = async () => {
   if (isConnected) return;
 
   try {
-    await mongoose.connect('mongodb+srv://higgosmit7:eEya82K8VnoXIx1r@sarecipe.nkqtv.mongodb.net/sarecipe', {
+    await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
       serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
