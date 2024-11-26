@@ -11,33 +11,39 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Connect to MongoDB with better error handling
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log('MongoDB Connected'))
-.catch(err => {
-  console.error('MongoDB connection error:', err);
-});
+// Connect to MongoDB only when the API is called
+let cachedDb = null;
 
-// Add error handler for MongoDB connection
-mongoose.connection.on('error', err => {
-  console.error('MongoDB connection error:', err);
-});
+async function connectToDatabase() {
+  if (cachedDb) {
+    return cachedDb;
+  }
 
-// Add keepAlive option
-mongoose.set('keepAlive', true);
-mongoose.set('keepAliveInitialDelay', 300000);
+  try {
+    const client = await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    
+    cachedDb = client;
+    console.log('MongoDB Connected');
+    return client;
+  } catch (err) {
+    console.error('MongoDB connection error:', err);
+    throw err;
+  }
+}
 
 // Routes
-app.get('/api', (req, res) => {
+app.get('/api', async (req, res) => {
+  await connectToDatabase();
   res.json({ message: 'Welcome to Vercel MERN API!' });
 });
 
 // Example CRUD endpoints
 app.get('/api/examples', async (req, res) => {
   try {
+    await connectToDatabase();
     const examples = await Example.find();
     res.json(examples);
   } catch (error) {
@@ -46,12 +52,12 @@ app.get('/api/examples', async (req, res) => {
 });
 
 app.post('/api/examples', async (req, res) => {
-  const example = new Example({
-    title: req.body.title,
-    description: req.body.description,
-  });
-
   try {
+    await connectToDatabase();
+    const example = new Example({
+      title: req.body.title,
+      description: req.body.description,
+    });
     const newExample = await example.save();
     res.status(201).json(newExample);
   } catch (error) {
@@ -59,9 +65,9 @@ app.post('/api/examples', async (req, res) => {
   }
 });
 
-// Add this new route
 app.get('/api/health', async (req, res) => {
   try {
+    await connectToDatabase();
     const status = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
     res.json({ 
       status: status,
@@ -75,5 +81,5 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// For Vercel, we need to export the Express app as a module
+// For Vercel, export the Express app
 module.exports = app; 
